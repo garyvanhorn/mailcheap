@@ -264,6 +264,18 @@ describe("from addresses", () => {
 });
 
 describe("own domains", () => {
+	test("an account without a tenant yet can add its first domain: the tenant is set up, then the new identity joins it", async () => {
+		const user = await customer("first-domain@example.com", "first-domain-news");
+		// A self-hosted server sets the tenant up at the first domain or send, not when a plan starts.
+		await m.Account.updateOne({ _id: user.accountId }, { $unset: { ses: 1 } });
+		const result = await as(user, () => m.domains.addDomainAction(null, form({ domain: "first-mail.com" })));
+		assert.deepEqual(result, { ok: true, domain: "first-mail.com" });
+		const name = `mc-${user.accountId}`;
+		assert.ok((await m.Account.findById(user.accountId).lean()).ses?.provisionedAt, "tenant set up");
+		assert.ok(state.identities.has("first-mail.com"));
+		assert.ok(state.associations.get(name).has("identity/first-mail.com"));
+	});
+
 	test("adding a domain creates its identity in the tenant, with DKIM and a return path; the website stays where it is", async () => {
 		const user = await customer("owner@example.com", "owner-news");
 		const result = await as(user, () => m.domains.addDomainAction(null, form({ domain: "https://Owner-Mail.com/" })));
