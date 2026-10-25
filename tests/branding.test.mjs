@@ -37,3 +37,15 @@ test("without branding the server is MailCheap", async () => {
 	if (!process.env.NEXT_PUBLIC_APP_NAME) assert.equal(config.APP_NAME, "MailCheap");
 	assert.equal(config.UPSTREAM_NAME, "MailCheap");
 });
+
+test("Redis settings come from Upstash's names or Vercel's KV_ names", async () => {
+	const { getRedisRest } = await import("../lib/config.js");
+	assert.equal(getRedisRest({}), null);
+	assert.deepEqual(getRedisRest({ UPSTASH_REDIS_REST_URL: "https://a.example.com", UPSTASH_REDIS_REST_TOKEN: "t1" }), { url: "https://a.example.com", token: "t1" });
+	assert.deepEqual(getRedisRest({ KV_REST_API_URL: "https://b.example.com", KV_REST_API_TOKEN: "t2" }), { url: "https://b.example.com", token: "t2" });
+	assert.deepEqual(
+		getRedisRest({ UPSTASH_REDIS_REST_URL: "https://a.example.com", UPSTASH_REDIS_REST_TOKEN: "t1", KV_REST_API_URL: "https://b.example.com", KV_REST_API_TOKEN: "t2" }),
+		{ url: "https://a.example.com", token: "t1" },
+		"Upstash's own names win",
+	);
+});
