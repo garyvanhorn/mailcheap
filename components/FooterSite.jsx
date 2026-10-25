@@ -2,9 +2,9 @@ import Link from "next/link";
 import ButtonThemeToggle from "@/components/ButtonThemeToggle";
 import LogoWordmark from "@/components/LogoWordmark";
 import { FooterCredit, FooterNote } from "@/components/SiteExtensions";
-import { isCloud } from "@/lib/config";
+import { APP_NAME, UPSTREAM_NAME, isCloud } from "@/lib/config";
 import { currentYear } from "@/lib/format";
-import { SOURCE_URL } from "@/lib/site";
+import { SOURCE_URL, UPSTREAM_SOURCE_URL } from "@/lib/site";
 import { siteExtensions } from "@/lib/site-extensions";
 import { cn } from "@/lib/utils";
 
@@ -63,11 +63,13 @@ const SELF_HOSTED_FOOTER = {
 	tagline: "Newsletters sent from your own server.",
 	columns: [
 		{
-			title: "MailCheap",
+			title: APP_NAME,
 			links: [
 				{ href: "/help", label: "Help" },
 				{ href: "/docs", label: "API and MCP" },
 				{ href: SOURCE_URL, label: "Source code", isExternal: true },
+				// A server under its own name credits the project it's built on.
+				...(APP_NAME === UPSTREAM_NAME ? [] : [{ href: UPSTREAM_SOURCE_URL, label: `Built on ${UPSTREAM_NAME}`, isExternal: true }]),
 			],
 		},
 	],
