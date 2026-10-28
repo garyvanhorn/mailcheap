@@ -417,16 +417,21 @@ describe("contacts", () => {
 		assert.equal((await m.exportRoute.GET(new Request(forged))).status, 401);
 	});
 
-	test("signups from a site send the welcome email and answer browsers", async () => {
+	test("signups from a site send the welcome email, untracked, and answer browsers", async () => {
 		const user = await customer("signups-api@example.com");
-		await api(user.key, "PATCH", `/newsletters/${user.slug}`, { welcome: { enabled: true, subject: "Welcome", markdown: "Thanks." } });
+		const markdown = "Thanks. [Start here](https://example.org/start)";
+		await api(user.key, "PATCH", `/newsletters/${user.slug}`, { welcome: { enabled: true, subject: "Welcome", markdown } });
 		const before = sesEmails.length;
 		const added = await api(user.signupsKey, "POST", "/contacts", { email: "new@example.org", ip: "203.0.113.9" });
 		await flushAfter();
 		assert.equal(added.status, 201);
 		assert.equal(added.headers.get("access-control-allow-origin"), "*");
 		assert.equal(sesEmails.length - before, 1);
-		assert.equal(sesEmails.at(-1).subject, "Welcome");
+		const welcome = sesEmails.at(-1);
+		assert.equal(welcome.subject, "Welcome");
+		assert.ok(welcome.html.includes('href="https://example.org/start"'), "the link goes straight to its page");
+		assert.ok(!welcome.html.includes("/c/") && !welcome.html.includes("/o/"), "no tracking redirect or pixel");
+		assert.ok(welcome.headers["List-Unsubscribe"], "one-click unsubscribe stays");
 
 		const preflight = await m.rest.handleRestPreflight(
 			new Request("http://localhost:3000/api/v1/contacts", { method: "OPTIONS", headers: { "access-control-request-method": "POST" } }),
