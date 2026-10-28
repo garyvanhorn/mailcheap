@@ -59,7 +59,7 @@ All names and addresses in the screenshots are made up.
 | | [MailCheap Cloud](https://mailcheap.ai) | Self-hosted |
 | --- | --- | --- |
 | Price | From $19 a month for 20,000 emails | Free, plus what your provider charges per email: $0.10 to $0.16 per 1,000 on Amazon SES |
-| Sending | Set up for you, from `hello@<slug>.mailcheap.ai` or your domain | Your Amazon SES or PostShiba account, from your domain |
+| Sending | Set up for you, from `hello@<slug>.mailcheap.ai` or your domain | Your Amazon SES, Resend or PostShiba account, from your domain |
 | Website | `<slug>.mailcheap.ai` | `/archive/<slug>` on your server's domain |
 | Who signs in | Anyone who signs up | The emails you allow |
 | Limits | Emails a month and active subscribers, by plan | None |
@@ -81,10 +81,10 @@ Plan for about an hour, most of it waiting for DNS and for your provider to appr
 | Service | For | Cost |
 | --- | --- | --- |
 | [MongoDB](https://www.mongodb.com/atlas) | Contacts, campaigns, stats | Free tier works |
-| [Amazon SES](https://aws.amazon.com/ses/) or [PostShiba](https://postshiba.com) | Sending | SES: $0.10 to $0.16 per 1,000 emails, depending on its pricing plan. PostShiba: a fixed price per cluster, invite only for now |
+| [Amazon SES](https://aws.amazon.com/ses/), [Resend](https://resend.com) or [PostShiba](https://postshiba.com) | Sending | SES: $0.10 to $0.16 per 1,000 emails, depending on its pricing plan. Resend: a monthly plan by volume, with a free plan of 3,000 emails a month. PostShiba: a fixed price per cluster, invite only for now |
 | [Upstash QStash](https://upstash.com/docs/qstash) | Background sending and scheduling | Free tier to start, then pay per message. One message sends 50 emails |
 | [Vercel](https://vercel.com) or any Node.js 22+ host | Hosting | Free tier works |
-| [Resend](https://resend.com) (optional) | Sign-in codes and alerts. Without it, they go through SES or PostShiba | Free plan works |
+| [Resend](https://resend.com) (optional) | Sign-in codes and alerts, and readers' emails too when it's the email provider. Without it, codes and alerts go through SES or PostShiba | Free plan works for codes and alerts |
 | [Upstash Redis](https://upstash.com/docs/redis) (optional) | Rate limits shared by every server instance | Free tier |
 | [Amazon S3](https://aws.amazon.com/s3/) with [CloudFront](https://aws.amazon.com/cloudfront/), or [Vercel Blob](https://vercel.com/docs/vercel-blob) (optional) | Image uploads in the editor, the newsletter settings and the API | S3 and CloudFront: pay per use. Blob: free tier |
 
@@ -103,7 +103,8 @@ Without Redis, MailCheap counts the same rate limits in each server instance's m
 | `APP_URL` | Public URL of the app, for email links and sign-in. On Vercel it defaults to the production domain |
 | `RESEND_API_KEY` | Optional: sign-in codes and alerts through Resend. Without it, they go through the email provider |
 | `SENDING_ENABLED` | Nothing goes to readers unless it's `true`. Sign-in codes and alerts don't wait for it |
-| `SES_*` or `POSTSHIBA_*` | The email provider, in step 4 |
+| `EMAIL_PROVIDER` | `ses`, `resend` or `postshiba`. Empty: PostShiba when `POSTSHIBA_API_KEY` is set, else SES. Resend is only picked by name |
+| `SES_*`, `RESEND_*` or `POSTSHIBA_*` | The email provider, in step 4 |
 | `QSTASH_*` | Background sending and scheduling, in step 5 |
 
 [`.env.example`](.env.example) lists every variable with what it does, the optional ones included: Google sign-in and Postmaster Tools, image uploads, Redis, Telegram alerts, the shared domain, and MailCheap Cloud's own.
@@ -134,7 +135,7 @@ Everyone gets an account of their own, with up to 3 newsletters and their contac
 
 ### 4. Email provider
 
-Pick Amazon SES or PostShiba (invite only for now). `EMAIL_PROVIDER` picks one; without it, MailCheap uses PostShiba when `POSTSHIBA_API_KEY` is set and SES otherwise. Every account gets its own tenant there, with its own domains, suppression list and pause switch. MailCheap creates them; you set up the provider account and its events once.
+Pick Amazon SES, Resend or PostShiba (invite only for now). `EMAIL_PROVIDER` picks one; without it, MailCheap uses PostShiba when `POSTSHIBA_API_KEY` is set and SES otherwise, never Resend, whose key alone only sends sign-in codes and alerts. On SES and PostShiba every account gets its own tenant, with its own domains, suppression list and pause switch; Resend has no tenants, so every account sends through your one Resend team, each email tagged with its account. MailCheap creates what it needs; you set up the provider account and its events once.
 
 #### Amazon SES
 
@@ -179,6 +180,23 @@ Use one AWS region for everything below (the examples use `us-east-1`). An AWS a
 5. **Optional: tenant pauses.** SES pauses tenants that send badly. To block the account in MailCheap too, send SES's tenant status and reputation finding events from EventBridge to a second SNS topic, subscribe `https://<your-app>/api/webhooks/ses-tenants` to it, and set `SES_TENANT_SNS_TOPIC_ARN`.
 
 Without Resend, sign-in codes and alerts go out through SES from `EMAIL_FROM`, outside every tenant, so its domain has to be verified in the AWS account before your first sign-in: **Identities > Create identity > Domain**, with Easy DKIM. In the sandbox, the addresses you sign in with have to be verified too.
+
+#### Resend
+
+No sandbox to leave and no approval to wait for: Resend sends to anyone as soon as a domain is verified. Its free plan sends 100 emails a day, so a newsletter needs a paid plan.
+
+1. **Key.** In API keys, create a full access key (domains need more than sending access): `RESEND_API_KEY`. The same key sends sign-in codes and alerts.
+2. **Webhook.** In Webhooks, add `https://<your-app>/api/webhooks/resend` with the events `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`, `email.complained`, `email.failed` and `email.suppressed`. Its signing secret (`whsec_…`) goes in `RESEND_WEBHOOK_SECRET`. Opens and clicks are counted by MailCheap itself, so leave `email.opened` and `email.clicked` off.
+3. **Pick it.** Set `EMAIL_PROVIDER=resend` and redeploy.
+
+| Variable | What it does |
+| --- | --- |
+| `RESEND_API_KEY` | A full access key of the Resend team |
+| `RESEND_WEBHOOK_SECRET` | Signing secret of the webhook at `/api/webhooks/resend` |
+| `RESEND_REGION` | Optional: where new domains send from, `us-east-1` (Resend's default), `eu-west-1`, `sa-east-1` or `ap-northeast-1` |
+| `RESEND_SEND_RATE_PER_SECOND` | Optional, default 8: emails per second for every account, under Resend's 10 requests a second per team, which sign-in codes share. Raise it once Resend raises your limit |
+
+Each domain you add in MailCheap is added at Resend with its tracking off, and lists Resend's records: a DKIM TXT record, and the MX and SPF records of the return path, `send.<domain>`. Every send carries an idempotency key, so a retried batch never sends an email twice. Resend has no pause per account: when MailCheap blocks an account, its own block stops the sends. Resend keeps one suppression list for the team; MailCheap's own lists, per account and shared, still apply before every send.
 
 #### PostShiba
 
