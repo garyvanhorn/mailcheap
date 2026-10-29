@@ -20,7 +20,7 @@ test("MailCheap's theme, saved or not, sends the email it always did: system fon
 
 test("a theme paints the email: page, text, headings, links, boxes and footer", () => {
 	const { html, text } = render({ preset: "garden" }, { fontBaseUrl: "https://mail.example.com" });
-	assert.match(html, /<body style="margin:0;padding:0;background:#eef1e8;">/);
+	assert.match(html, /<body style="margin:0;padding:0;background:#eef1e8;background-color:#eef1e8;" bgcolor="#eef1e8">/);
 	assert.match(html, /font-family:'MC DM Sans',-apple-system/);
 	assert.match(html, /\.body h1, \.body h2, \.body h3 \{ line-height: 1\.3; margin: 40px 0 15px; color: #1f2a22; font-family: 'MC Fraunces',Georgia,'Times New Roman',Times,serif; font-weight: 600; letter-spacing: -0\.015em; \}/);
 	assert.match(html, /\.body a \{ color: #2f6a4a; \}/);
@@ -49,4 +49,40 @@ test("editor pictures take the theme's corners; designed HTML emails keep their 
 	assert.match(rich.html, /<img style="display:block;max-width:100%;height:auto;margin:24px auto;border-radius:0px;"/);
 	const designed = { format: "html", html: "<html><body><p>Hi</p></body></html>", subject: "Hi" };
 	assert.equal(renderEmail({ ...designed, newsletter: { name: "N", theme: { preset: "midnight" } } }).html, renderEmail({ ...designed, newsletter: { name: "N" } }).html);
+});
+
+test("a dark theme stays dark where clients drop <body> and <style> backgrounds", () => {
+	const theme = { preset: "midnight", colors: { background: "#070909", text: "#e6ebe7", accent: "#ff7a5c" } };
+	const { html } = renderEmail({
+		format: "rich",
+		html: '<h2>Signals</h2><p>See <a href="https://example.org">the spec</a> and <code>ttlMs</code>.</p><blockquote><p>End.</p></blockquote><hr>',
+		subject: "Hi",
+		webUrl: "https://example.org/p/hi",
+		newsletter: { name: "MachinaTechnica", postalAddress: "1 Main St", theme },
+	});
+	assert.match(html, /<meta name="color-scheme" content="light dark">\n<meta name="supported-color-schemes" content="light dark">/);
+	assert.match(html, /:root \{ color-scheme: light dark; supported-color-schemes: light dark; \}/);
+	// Every layer of the page carries the color as an attribute and inline, for Gmail and Outlook.
+	assert.match(html, /<body [^>]*background-color:#070909;[^>]*bgcolor="#070909">/);
+	assert.equal(html.match(/bgcolor="#070909"/g).length, 5, "body, outer table, its cell, the column and the content cell");
+	assert.match(html, /<v:background fill="t"><v:fill type="tile" color="#070909"\/><\/v:background>/);
+	assert.match(html, /<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml">/);
+	assert.match(html, /\[data-ogsb\] \.mc-page \{ background-color: #070909 !important; \}/);
+	assert.match(html, /\[data-ogsc\] \.mc-page \{ color: #[0-9a-f]{6} !important; \}/);
+	// Text colors live on the elements, not only in <style>.
+	assert.match(html, /<td class="body mc-page" bgcolor="#070909" style="color:#[0-9a-f]{6};background-color:#070909;">/);
+	assert.match(html, /<h2 style="color:#e6ebe7;">Signals<\/h2>/);
+	assert.match(html, /<a href="https:\/\/example\.org" style="color:#[0-9a-f]{6};">the spec<\/a>/);
+	assert.match(html, /<code style="color:#[0-9a-f]{6};background-color:#[0-9a-f]{6};overflow-wrap:anywhere;word-break:break-word;">ttlMs<\/code>/);
+	assert.match(html, /<blockquote style="color:#[0-9a-f]{6};border-left:3px solid #[0-9a-f]{6};padding-left:16px;">/);
+	assert.match(html, /<hr style="border:0;border-top:1px solid #[0-9a-f]{6};">/);
+	assert.match(html, /<a href="[^"]*" style="color:#[0-9a-f]{6};text-decoration:none;">Read online<\/a>/, "a link with its own style keeps it");
+});
+
+test("a light theme says light, and MailCheap's own theme keeps its email exactly", () => {
+	const { html } = render({ preset: "garden" });
+	assert.match(html, /<meta name="color-scheme" content="light">\n<meta name="supported-color-schemes" content="light">/);
+	const plain = render(null).html;
+	assert.doesNotMatch(plain, /bgcolor|supported-color-schemes|v:background|data-ogs|mc-page/);
+	assert.match(plain, /<body style="margin:0;padding:0;background:#ffffff;">/);
 });
