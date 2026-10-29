@@ -115,7 +115,9 @@ export default function NewslettersPage() {
 				An email each new subscriber gets when they join, written in Markdown. Send yourself a test of it from the{" "}
 				<LinkApp href="/newsletters/welcome">Welcome email page</LinkApp>.
 				While double opt-in is on, new subscribers get the confirmation email instead: turning the welcome email on turns double
-				opt-in off when you save, and the page says so first.
+				opt-in off when you save, and the page says so first. Like the confirmation email, it goes out without open tracking and
+				its links go straight to their pages, since it&apos;s the first email a new subscriber&apos;s inbox sees from you. So
+				the opens and clicks on the <LinkApp href="/">overview</LinkApp> are your issues&apos; only.
 				{isCloud() && (
 					<>
 						{" "}
