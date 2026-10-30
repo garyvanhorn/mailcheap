@@ -63,7 +63,7 @@ test("a dark theme stays dark where clients drop <body> and <style> backgrounds"
 	assert.match(html, /<meta name="color-scheme" content="light dark">\n<meta name="supported-color-schemes" content="light dark">/);
 	assert.match(html, /:root \{ color-scheme: light dark; supported-color-schemes: light dark; \}/);
 	// Every layer of the page carries the color as an attribute and inline, for Gmail and Outlook.
-	assert.match(html, /<body [^>]*background-color:#070909;[^>]*bgcolor="#070909">/);
+	assert.match(html, /<body [^>]*background-color:#070909;[^>]*bgcolor="#070909" class="mc-body">/);
 	assert.equal(html.match(/bgcolor="#070909"/g).length, 5, "body, outer table, its cell, the column and the content cell");
 	assert.match(html, /<v:background fill="t"><v:fill type="tile" color="#070909"\/><\/v:background>/);
 	assert.match(html, /<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml">/);
@@ -79,9 +79,26 @@ test("a dark theme stays dark where clients drop <body> and <style> backgrounds"
 	assert.match(html, /<a href="[^"]*" style="color:#[0-9a-f]{6};text-decoration:none;">Read online<\/a>/, "a link with its own style keeps it");
 });
 
+test("a dark theme survives Gmail's iOS inversion: gradient page, blend layers around the column", () => {
+	const theme = { preset: "midnight", colors: { background: "#070909", text: "#e6ebe7", accent: "#ff7a5c" } };
+	const { html } = render(theme);
+	// Gmail doesn't invert background images, so the outer layers carry the color as one.
+	assert.equal(html.match(/background-image:linear-gradient\(#070909,#070909\);/g).length, 3, "body, outer table and its cell");
+	assert.match(html, /u \+ \.mc-body \.mc-blend-screen \{ background: #000; mix-blend-mode: screen; \}/);
+	assert.match(html, /u \+ \.mc-body \.mc-blend-difference \{ background: #000; mix-blend-mode: difference; \}/);
+	// The column, footer included, sits inside both layers, and nothing inside them uses a background image.
+	const inner = html.slice(html.indexOf('<div class="mc-blend-screen"><div class="mc-blend-difference">'), html.indexOf("</div></div>"));
+	assert.ok(inner.length > 0, "the blend layers wrap the column");
+	assert.match(inner, /You're receiving this/);
+	assert.doesNotMatch(inner, /background-image/);
+	assert.match(inner, /max-width:600px;margin:0 auto;/);
+});
+
 test("a light theme says light, and MailCheap's own theme keeps its email exactly", () => {
 	const { html } = render({ preset: "garden" });
 	assert.match(html, /<meta name="color-scheme" content="light">\n<meta name="supported-color-schemes" content="light">/);
+	// Gmail may invert a light theme to dark; that's fine, so it gets no blend layers.
+	assert.doesNotMatch(html, /mc-blend|mc-body|linear-gradient/);
 	const plain = render(null).html;
 	assert.doesNotMatch(plain, /bgcolor|supported-color-schemes|v:background|data-ogs|mc-page/);
 	assert.match(plain, /<body style="margin:0;padding:0;background:#ffffff;">/);
