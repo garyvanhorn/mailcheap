@@ -12,7 +12,7 @@ Upstream is `marclou/mailcheap`; this fork is `garyvanhorn/mailcheap`, default b
 - The main checkout sits on `fix/gmail-ios-dark` (already merged). Start new work from `origin/main` in a worktree.
 
 ## Needs Gary
-- Review and merge this HANDOFF PR (opened by the Nov 1 scheduled run; link in the PR list: https://github.com/garyvanhorn/mailcheap/pulls).
+- Review and merge this HANDOFF PR (Nov 1 scheduled run): https://github.com/garyvanhorn/mailcheap/pull/8
 - Assumed this fork keeps the AGPL source link pointing at upstream until `NEXT_PUBLIC_SOURCE_URL` is set in Vercel to `https://github.com/garyvanhorn/mailcheap`; set it if you want the fork's own link shown (no code change needed).
 
 ## Next
