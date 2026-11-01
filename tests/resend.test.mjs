@@ -109,6 +109,10 @@ test("Resend's events take the one event shape, with the account and message fro
 
 	const delayed = getEventPlan(normalizeResendEvent(resendEvent("email.delivery_delayed")));
 	assert.deepEqual([delayed.type, delayed.status, delayed.isRecorded], ["email.delivery_delayed", null, true]);
+	assert.equal(delayed.rateLimit, null, "Resend's documented delay event has no reason, so nothing backs off");
+	const gmail = "421 4.7.28 Gmail has detected an unusual rate of mail originating from your SPF domain. - gsmtp";
+	const withReason = getEventPlan(normalizeResendEvent(resendEvent("email.delivery_delayed", { delivery_delayed: { diagnosticCode: gmail } })));
+	assert.match(withReason.rateLimit, /^421 4\.7\.28 Gmail has detected/, "a reason, if Resend ever sends one, still backs off");
 
 	const failed = getEventPlan(normalizeResendEvent(resendEvent("email.failed", { failed: { reason: "reached_daily_quota" } })));
 	assert.deepEqual(failed.status, { to: "failed", from: ["queued", "sent"], stat: "failed" });

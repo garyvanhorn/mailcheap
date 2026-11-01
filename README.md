@@ -28,7 +28,7 @@
 
 ![MailCheap's overview: emails sent, delivery, open, click, bounce and complaint rates, and subscribers over the last 30 days](docs/screenshots/overview.webp)
 
-MailCheap is a newsletter app: write an issue, send it to your list, publish it on the web, from the dashboard or from your AI agent. This repository is the whole app. Self-host it with your own Amazon SES or PostShiba account, or use [MailCheap Cloud](https://mailcheap.ai), which runs this same code.
+MailCheap is a newsletter app: write an issue, send it to your list, publish it on the web, from the dashboard or from your AI agent. This repository is the whole app. Self-host it with your own Amazon SES, Resend or PostShiba account, or use [MailCheap Cloud](https://mailcheap.ai), which runs this same code.
 
 ## Features
 
@@ -196,7 +196,7 @@ No sandbox to leave and no approval to wait for: Resend sends to anyone as soon 
 | `RESEND_REGION` | Optional: where new domains send from, `us-east-1` (Resend's default), `eu-west-1`, `sa-east-1` or `ap-northeast-1` |
 | `RESEND_SEND_RATE_PER_SECOND` | Optional, default 8: emails per second for every account, under Resend's 10 requests a second per team, which sign-in codes share. Raise it once Resend raises your limit |
 
-Each domain you add in MailCheap is added at Resend with its tracking off, and lists Resend's records: a DKIM TXT record, and the MX and SPF records of the return path, `send.<domain>`. Every send carries an idempotency key, so a retried batch never sends an email twice. Resend has no pause per account: when MailCheap blocks an account, its own block stops the sends. Resend keeps one suppression list for the team; MailCheap's own lists, per account and shared, still apply before every send.
+Each domain you add in MailCheap is added at Resend with its tracking off, and lists Resend's records: a DKIM TXT record, and the MX and SPF records of the return path, `send.<domain>`. Every send carries an idempotency key, so a retried batch never sends an email twice. Resend has no pause per account: when MailCheap blocks an account, its own block stops the sends. Resend's `email.delivery_delayed` events carry no reason, so on Resend a Gmail rate limit (`4.7.28`) doesn't pause a newsletter's sends the way it does on SES and PostShiba. Resend keeps one suppression list for the team; MailCheap's own lists, per account and shared, still apply before every send.
 
 #### PostShiba
 
