@@ -5,20 +5,21 @@ mailto:bot is Gary's fork of MailCheap, the open source newsletter app (AGPL-3.0
 Upstream is `marclou/mailcheap`; this fork is `garyvanhorn/mailcheap`, default branch `main`.
 
 ## Now
+- Nov 4: PR #9's changes never reached `main` (it merged into #8's branch 13 seconds after #8 landed). PR #10 re-lands them: Resend's `email.delivery_delayed` events carry no reason, so Gmail's `4.7.28` never pauses sends on Resend (comment and test), and the README intro and AGENTS.md name Resend.
 - Sending goes through Resend (`EMAIL_PROVIDER=resend`). Amazon SES production access was denied on Nov 1, 2026: don't reapply. The SES code path stays in the code.
-- `main` is at `074b020` (Oct 29): PRs #1 to #7 merged (branding through settings, Redis `KV_` names, first-domain fix, Resend, untracked welcome emails, dark themes in every client and Gmail iOS). No open PRs.
+- `main` is at `30d6c3d` (Nov 1): PRs #1 to #8 merged (branding through settings, Redis `KV_` names, first-domain fix, Resend, untracked welcome emails, dark themes in every client and Gmail iOS, this HANDOFF).
 - Transmission 001 went out on Oct 29 from app.mailtobot.io (MachinaTechnica's newsletter). Its design is Midnight with custom colors: don't reset it.
 - The dark email template is checked in Gmail web and Gmail iOS only; Outlook, Yahoo, Apple Mail, Gmail Android and iCloud are untested.
 - The main checkout sits on `fix/gmail-ios-dark` (already merged). Start new work from `origin/main` in a worktree.
 
 ## Needs Gary
-- Review and merge this HANDOFF PR (Nov 1 scheduled run): https://github.com/garyvanhorn/mailcheap/pull/8
+- Review and merge PR #10 (re-lands #9, which missed `main`): https://github.com/garyvanhorn/mailcheap/pull/10
 - Assumed this fork keeps the AGPL source link pointing at upstream until `NEXT_PUBLIC_SOURCE_URL` is set in Vercel to `https://github.com/garyvanhorn/mailcheap`; set it if you want the fork's own link shown (no code change needed).
 
 ## Next
+- Stacked PRs: merge the bottom one, then retarget the next to `main` before merging it, or its changes land on a dead branch (what happened to #9).
 - Fork cosmetics: README badges, Deploy button and `SECURITY.md` still point at `marclou/mailcheap`; decide which stay as upstream credit and which point at the fork (`lib/site.js` already reads `NEXT_PUBLIC_SOURCE_URL`).
-- Deliverability: README and AGENTS.md still describe sending as SES or PostShiba; add Resend to the self-hosting guide and the help center's sending articles.
-- Deliverability: confirm Resend's `email.delivery_delayed` reasons carry Gmail's `421 4.7.28` so `lib/send-backoff.js` pauses on Gmail rate limits the same way it does on PostShiba (add a test with a made-up Resend event).
+- Deliverability: on Resend, nothing notices a Gmail rate limit (delay events have no reason, and `backOffSender` only runs with `MAILCHEAP_CLOUD=true`). Next idea: pause a newsletter when Gmail delays pile up (count `email.delivery_delayed` to Gmail addresses per send), behind a test.
 - Add a database name to `MONGODB_URI` in Vercel (Gary's to set) and a mailtobot.io favicon.
 - Dark email: test in Outlook and Yahoo only if Gary sets up inboxes there.
 
