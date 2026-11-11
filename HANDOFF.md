@@ -5,7 +5,7 @@ mailto:bot is Gary's fork of MailCheap, the open source newsletter app (AGPL-3.0
 Upstream is `marclou/mailcheap`; this fork is `garyvanhorn/mailcheap`, default branch `main`.
 
 ## Now
-- Nov 11: branch `claude/next-2026-11-11` (draft PR, see Needs Gary) makes Resend notice Gmail's rate limit. Resend's `email.delivery_delayed` events carry no reason, so the 4.7.28 check never fired. Now, when Gmail delays at least 20 of one send's emails in an hour, and at least one in ten of that send's Gmail emails (`GMAIL_DELAYS` in `lib/config.js`), MailCheap Cloud backs the newsletter off as if Gmail had said 4.7.28, and a self-hosted server emails the owner once a day per send ("Gmail is holding back a send") so they can pause it. The help article `/help/warm-up#gmail` says so.
+- Nov 11: branch `claude/next-2026-11-11` (draft PR #11) makes Resend notice Gmail's rate limit. Resend's `email.delivery_delayed` events carry no reason, so the 4.7.28 check never fired. Now, when Gmail delays at least 20 of one send's emails in an hour, and at least one in ten of that send's Gmail emails (`GMAIL_DELAYS` in `lib/config.js`), MailCheap Cloud backs the newsletter off as if Gmail had said 4.7.28, and a self-hosted server emails the owner once a day per send ("Gmail is holding back a send") so they can pause it. The help article `/help/warm-up#gmail` says so.
 - Its pure tests and lint pass here. The integration test ("Gmail delaying many of a send's emails...", `tests/resend.test.mjs`) needs `mongod`, which this cloud session couldn't download, so it hasn't run yet. Run `npm test` before merging.
 - PR #10 merged Nov 4 (`c862205`): #9's changes are on `main`.
 - Sending goes through Resend (`EMAIL_PROVIDER=resend`). Amazon SES production access was denied on Nov 1, 2026: don't reapply. The SES code path stays in the code.
@@ -13,7 +13,7 @@ Upstream is `marclou/mailcheap`; this fork is `garyvanhorn/mailcheap`, default b
 - The dark email template is checked in Gmail web and Gmail iOS only; Outlook, Yahoo, Apple Mail, Gmail Android and iCloud are untested.
 
 ## Needs Gary
-- Review the Gmail delay detection PR, run `npm test` locally (needs `mongod`), then merge: https://github.com/garyvanhorn/mailcheap/pulls?q=head%3Aclaude%2Fnext-2026-11-11
+- Review the Gmail delay detection PR, run `npm test` locally (needs `mongod`), then merge: https://github.com/garyvanhorn/mailcheap/pull/11
 - Assumed a self-hosted server (what app.mailtobot.io runs, unless `MAILCHEAP_CLOUD=true` is set) only emails you when Gmail delays pile up, instead of pausing the send by itself: the automatic pause and resume belong to the Cloud warm-up. Say if you want it to pause by itself too.
 - Assumed 20 delayed Gmail emails in an hour, and at least 10% of the send's Gmail emails, as the threshold; say if MachinaTechnica's list is small enough that you want it lower.
 - Assumed this fork keeps the AGPL source link pointing at upstream until `NEXT_PUBLIC_SOURCE_URL` is set in Vercel to `https://github.com/garyvanhorn/mailcheap`; set it if you want the fork's own link shown (no code change needed).
