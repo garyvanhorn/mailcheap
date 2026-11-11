@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
-import { BACKOFF, FIRST_SEND, SENDER_WARMUP, WARMUP, getSharedDomain } from "@/lib/config";
+import { BACKOFF, FIRST_SEND, GMAIL_DELAYS, SENDER_WARMUP, WARMUP, getSharedDomain } from "@/lib/config";
 import { formatCount, formatNumber } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { getAllowance, getPaceHours, getSenderDayEmails } from "@/lib/send-spread";
@@ -130,6 +130,12 @@ export default function WarmupPage() {
 				{formatCount(BACKOFF.hours, "hour")} and emails you. Then they go on by themselves, the address warming up again from half
 				the emails it sent in the day before, twice as many each day after. Resuming earlier, or moving to another address, still
 				waits for those hours.
+			</p>
+			<p>
+				Some email providers don&apos;t pass Gmail&apos;s words on, only that an email is delayed. Then MailCheap counts them: once
+				Gmail delays {formatCount(GMAIL_DELAYS.emails, "email")} of a send in {formatCount(GMAIL_DELAYS.minutes, "minute")}, and at
+				least one in {formatNumber(Math.round(1 / GMAIL_DELAYS.share))} of those it sends to Gmail, it pauses the same way. On your
+				own server, without the warm-up, it emails you instead, for you to pause the send.
 			</p>
 			<p>
 				If it keeps happening, the contacts probably didn&apos;t expect your emails: check where they came from before you send

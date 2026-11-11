@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { after, afterEach, before, describe, test } from "node:test";
 import mongoose from "mongoose";
-import { getEmailProviderId } from "../lib/config.js";
-import { getEventPlan } from "../lib/email-event-rules.js";
+import { GMAIL_DELAYS, getEmailProviderId } from "../lib/config.js";
+import { getEventPlan, isGmailDelayPileUp } from "../lib/email-event-rules.js";
 import { SEND_OUTCOMES } from "../lib/email-provider/outcomes.js";
 import { normalizeResendEvent, verifyResendSignature } from "../lib/email-provider/resend-events.js";
 import { buildResendEmail, getRecordHost, getResendSendError, getResendTags, toDomainStatus } from "../lib/email-provider/resend-rules.js";
 import { getSendErrorAction } from "../lib/sending-rules.js";
-import { activate, as, catchRedirect, form, jsonRequest, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, as, catchRedirect, form, jsonRequest, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 import { RESEND, RESEND_ENV, createFakeResend, signResend } from "./helpers/resend.mjs";
 import { published } from "./stubs/qstash.mjs";
 
@@ -113,6 +113,7 @@ test("Resend's events take the one event shape, with the account and message fro
 	const gmail = "421 4.7.28 Gmail has detected an unusual rate of mail originating from your SPF domain. - gsmtp";
 	const withReason = getEventPlan(normalizeResendEvent(resendEvent("email.delivery_delayed", { delivery_delayed: { diagnosticCode: gmail } })));
 	assert.match(withReason.rateLimit, /^421 4\.7\.28 Gmail has detected/, "a reason, if Resend ever sends one, still backs off");
+	assert.deepEqual([delayed.isUnexplainedDelay, withReason.isUnexplainedDelay], [true, false], "only a delay without a reason gets counted");
 
 	const failed = getEventPlan(normalizeResendEvent(resendEvent("email.failed", { failed: { reason: "reached_daily_quota" } })));
 	assert.deepEqual(failed.status, { to: "failed", from: ["queued", "sent"], stat: "failed" });
@@ -130,6 +131,14 @@ test("Resend's events take the one event shape, with the account and message fro
 	const spoofed = normalizeResendEvent(resendEvent("email.bounced", { tags: { account_id: { $ne: null }, message_id: "../x" } }));
 	assert.deepEqual([spoofed.accountId, spoofed.messageId], [null, null]);
 	assert.deepEqual([normalizeResendEvent(resendEvent("email.bounced", { tags: undefined })).accountId], [null], "MailCheap's own emails carry no account");
+});
+
+test("Gmail delays without a reason only mean a rate limit when many of a send's Gmail emails wait at once", () => {
+	assert.deepEqual(GMAIL_DELAYS, { emails: 20, share: 0.1, minutes: 60 }, "the help center's numbers");
+	assert.equal(isGmailDelayPileUp({ delayed: 19, sentToGmail: 19 }), false, "a few delays are a busy mailbox");
+	assert.equal(isGmailDelayPileUp({ delayed: 20, sentToGmail: 200 }), true);
+	assert.equal(isGmailDelayPileUp({ delayed: 20, sentToGmail: 201 }), false, "under one in ten of a big send");
+	assert.equal(isGmailDelayPileUp({ delayed: 150, sentToGmail: 1500 }), true);
 });
 
 test("Resend's errors become outcomes: retry what didn't go, pause what the setup refuses, fail the rest", () => {
@@ -302,8 +311,10 @@ describe("Resend as the email provider", () => {
 			Campaign: (await import("../models/Campaign.js")).default,
 			Contact: (await import("../models/Contact.js")).default,
 			Domain: (await import("../models/Domain.js")).default,
+			Alert: (await import("../models/Alert.js")).default,
 			Event: (await import("../models/Event.js")).default,
 			Message: (await import("../models/Message.js")).default,
+			SenderDomain: (await import("../models/SenderDomain.js")).default,
 			Suppression: (await import("../models/Suppression.js")).default,
 		};
 	});
@@ -485,6 +496,54 @@ describe("Resend as the email provider", () => {
 		assert.deepEqual(await (await postWebhook(untagged)).json(), { ok: true, handled: 1 }, "MailCheap's own emails: no account");
 		const unknown = resendEvent("email.bounced", { tags: { account_id: String(new mongoose.Types.ObjectId()) } });
 		assert.equal((await postWebhook(unknown)).status, 200);
+	});
+
+	test("Gmail delaying many of a send's emails without a reason backs its newsletter off, or emails a self-hosted owner", async () => {
+		async function delays(user, count, { readers = 30, at = "gmail.com" } = {}) {
+			const campaignId = new mongoose.Types.ObjectId();
+			await m.Campaign.create({ _id: campaignId, accountId: user.accountId, newsletterId: user.newsletterId, subject: "Delays", status: "sent", startedAt: new Date() });
+			const messages = await m.Message.insertMany(
+				Array.from({ length: readers }, (_, index) => ({
+					kind: "campaign",
+					accountId: user.accountId,
+					newsletterId: user.newsletterId,
+					campaignId,
+					contactId: new mongoose.Types.ObjectId(),
+					email: `reader-${index}@${at}`,
+					status: "sent",
+					sentAt: new Date(),
+					providerMessageId: crypto.randomUUID(),
+				}))
+			);
+			for (const message of messages.slice(0, count)) {
+				const event = resendEvent("email.delivery_delayed", {
+					email_id: message.providerMessageId,
+					to: [message.email],
+					tags: { account_id: String(user.accountId), message_id: String(message._id), kind: "campaign" },
+				});
+				event.created_at = new Date().toISOString();
+				assert.equal((await postWebhook(event, { id: `msg_${crypto.randomUUID()}` })).status, 200);
+			}
+			return campaignId;
+		}
+
+		const alertOf = (accountId, key) => m.Alert.findOne({ accountId, key }).lean();
+		const cloud = await customer("re-delays@example.com", "re-delays");
+		const backoffKey = `gmail-backoff:${cloud.newsletterId}`;
+		await delays(cloud, GMAIL_DELAYS.emails - 1);
+		await delays(cloud, GMAIL_DELAYS.emails, { at: "example.org" });
+		assert.equal(await alertOf(null, backoffKey), null, "a few delays, or delays outside Gmail, are nothing");
+		await delays(cloud, GMAIL_DELAYS.emails);
+		const backoff = await alertOf(null, backoffKey);
+		assert.match(backoff.occurrences[0].detail, /Gmail delayed 20 emails of the 30 this send has for Gmail in the last 60 minutes/);
+		assert.ok(await m.SenderDomain.exists({ accountId: cloud.accountId, domain: "re-delays.dev", backoffAt: { $ne: null } }), "backed off like Gmail's 4.7.28");
+
+		const owner = await customer("re-delays-own@example.com", "re-delays-own");
+		const campaignId = await withEnv({ MAILCHEAP_CLOUD: "" }, () => delays(owner, GMAIL_DELAYS.emails + 2));
+		const alert = await alertOf(owner.accountId, `gmail-delays-${campaignId}`);
+		assert.equal(alert.title, "Gmail is holding back a send");
+		assert.equal(alert.occurrences.filter(({ emailed }) => emailed).length, 1, "emailed once, however many more delays come");
+		assert.equal(await m.SenderDomain.exists({ accountId: owner.accountId, backoffAt: { $ne: null } }), null, "no warm-up to resume into");
 	});
 
 	test("the admin page shows Resend's rate, without its quotas", async () => {
