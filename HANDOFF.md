@@ -5,7 +5,7 @@ mailto:bot is Gary's fork of MailCheap, the open source newsletter app (AGPL-3.0
 Upstream is `marclou/mailcheap`; this fork is `garyvanhorn/mailcheap`, default branch `main`.
 
 ## Now
-- Nov 18: branch `claude/next-2026-11-18` (draft PR) shows delayed emails on a campaign's report. The inbox table gets a Delayed column, once any inbox held some emails back: how many of each inbox's emails were delayed at least once, as a share of what it was sent. The API's and MCP's `get_campaign_report` returns `providers[].delayed`, and the help article `/help/sending#report` says so. It reads the delay events already stored in `Event` (Resend `email.delivery_delayed`, SES `DeliveryDelay`, PostShiba `deferred`); nothing new is stored.
+- Nov 18: branch `claude/next-2026-11-18` (draft PR #12) shows delayed emails on a campaign's report. The inbox table gets a Delayed column, once any inbox held some emails back: how many of each inbox's emails were delayed at least once, as a share of what it was sent. The API's and MCP's `get_campaign_report` returns `providers[].delayed`, and the help article `/help/sending#report` says so. It reads the delay events already stored in `Event` (Resend `email.delivery_delayed`, SES `DeliveryDelay`, PostShiba `deferred`); nothing new is stored.
 - Its pure tests (render, row merge, each provider's delay name) and lint pass here. The integration test ("the report counts each inbox's delayed emails once...", `tests/link-stats.test.mjs`) needs `mongod`, which this cloud session still can't download (fastdl.mongodb.org is blocked), so it hasn't run. Run `npm test` before merging.
 - Nov 11: draft PR #11 (`claude/next-2026-11-11`) makes Resend notice Gmail's rate limit: when Gmail delays at least 20 of one send's emails in an hour, and one in ten of its Gmail emails, MailCheap Cloud backs off and a self-hosted server emails the owner. Not merged yet; its integration test hasn't run either. The two PRs touch different code; only `HANDOFF.md` conflicts (keep the newer one).
 - `main` is at `c862205` (Nov 4, PR #10). No commits since.
@@ -14,7 +14,7 @@ Upstream is `marclou/mailcheap`; this fork is `garyvanhorn/mailcheap`, default b
 - The dark email template is checked in Gmail web and Gmail iOS only; Outlook, Yahoo, Apple Mail, Gmail Android and iCloud are untested.
 
 ## Needs Gary
-- Review the delayed-emails report PR, run `npm test` locally (needs `mongod`), then merge: https://github.com/garyvanhorn/mailcheap/pulls?q=head%3Aclaude%2Fnext-2026-11-18
+- Review the delayed-emails report PR, run `npm test` locally (needs `mongod`), then merge: https://github.com/garyvanhorn/mailcheap/pull/12
 - Review PR #11 (Gmail delay detection), run `npm test`, then merge: https://github.com/garyvanhorn/mailcheap/pull/11
 - Assumed the Delayed column shows only once a send has a delayed email, between Clicked and Bounced, hidden on phones like Bounced; say if you want it always there.
 - Assumed a self-hosted server only emails you when Gmail delays pile up (PR #11), instead of pausing the send by itself; say if you want it to pause too.
