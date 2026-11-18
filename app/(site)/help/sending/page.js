@@ -154,8 +154,9 @@ export default function SendingPage() {
 			<h2 id="report">The report</h2>
 			<p>
 				Each sent campaign&apos;s page shows how many emails were delivered, opened and clicked, and how many bounced or led to an
-				unsubscribe, with results by inbox provider, like Gmail or Outlook, where you also see how many were marked as spam. It
-				counts the list cleanup&apos;s last-chance emails apart. Opens are an estimate: some inboxes load every email&apos;s images
+				unsubscribe, with results by inbox provider, like Gmail or Outlook, where you also see how many were marked as spam. Once an
+				inbox holds some emails back, a Delayed column shows how many it delayed at least once: most still arrive, but many delayed
+				at once is how Gmail <Link href={getHelpHref("warm-up", "gmail")}>asks a sender to slow down</Link>. It counts the list cleanup&apos;s last-chance emails apart. Opens are an estimate: some inboxes load every email&apos;s images
 				on their own, which counts as an open, and some readers block images. Preview, at the top, shows the email as it went out,
 				in a mail app or in Gmail on a phone, as a sample reader or as one of your contacts.
 			</p>

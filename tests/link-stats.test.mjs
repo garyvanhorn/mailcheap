@@ -99,6 +99,7 @@ describe("clicks per link", () => {
 			Campaign: (await import("../models/Campaign.js")).default,
 			CampaignLink: (await import("../models/CampaignLink.js")).default,
 			Message: (await import("../models/Message.js")).default,
+			Event: (await import("../models/Event.js")).default,
 		};
 	});
 
@@ -230,5 +231,25 @@ describe("clicks per link", () => {
 		assert.equal(partial.linksComplete, false);
 		assert.ok(partial.linksCountedSince, "counted since its first counted click");
 		assert.equal(await m.CampaignLink.countDocuments({ accountId: user.accountId }), 1, "the welcome email and the unsubscribe link aren't counted");
+	});
+
+	test("the report counts each inbox's delayed emails once, whichever provider named the delay", async () => {
+		const user = await customer("delays@example.com", 3);
+		const { id } = await sendIssue(user, "<p>Hello</p>");
+		const [first, second] = await m.Message.find({ accountId: user.accountId, campaignId: id }).sort({ email: 1 }).lean();
+		const delay = (message, type) => ({ accountId: user.accountId, type, messageId: message._id, campaignId: id, email: message.email });
+		await m.Event.insertMany([
+			delay(first, "email.delivery_delayed"),
+			delay(first, "email.delivery_delayed"),
+			delay(second, "DeliveryDelay"),
+			delay(second, "bounce"),
+		]);
+
+		const { providers } = await report(user, id);
+		assert.deepEqual(
+			providers.map(({ provider, sent, delayed }) => [provider, sent, delayed]),
+			[["other", 3, 2]],
+			"two of the three emails delayed, the repeat and the bounce not counted"
+		);
 	});
 });

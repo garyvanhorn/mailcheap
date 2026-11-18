@@ -115,3 +115,16 @@ test("the report compares opens and clicks with the average in percent, never in
 	assert.ok(html.includes("−0.4%"));
 	assert.ok(!/\bpts\b/.test(html));
 });
+
+test("the inbox table shows delayed emails only once an inbox delayed some", () => {
+	const rows = (gmailDelayed) => [
+		{ provider: "gmail", sent: 600, delivered: 595, opened: 300, clicked: 50, bounced: 5, complained: 0, delayed: gmailDelayed },
+		{ provider: "outlook", sent: 400, delivered: 395, opened: 162, clicked: 20, bounced: 5, complained: 1, delayed: 0 },
+	];
+	assert.ok(!renderReport({ providers: rows(0) }).includes(">Delayed</th>"), "no column while nothing was delayed");
+
+	const html = renderReport({ providers: rows(60) });
+	assert.ok(html.indexOf(">Delayed</th>") > html.indexOf(">Clicked</th>"));
+	assert.ok(html.indexOf(">Delayed</th>") < html.indexOf(">Bounced</th>"));
+	assert.ok(html.includes(">10.0%</td>"), "60 of Gmail's 600");
+});
