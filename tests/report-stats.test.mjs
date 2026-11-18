@@ -108,3 +108,33 @@ test("an hour reads with its weekday in the viewer's timezone, with minutes only
 	assert.equal(formatWeekdayHour("2026-10-13T09:00:00Z", "Europe/Athens"), "Tue 12 PM");
 	assert.equal(formatWeekdayHour("2026-10-13T09:00:00Z", "Asia/Kolkata"), "Tue 2:30 PM");
 });
+
+test("the report counts delayed emails under every provider's own name for a delay", async () => {
+	const { DELAYED_EVENT_TYPES } = await import("../lib/report-stats.js");
+	const { getEventPlan } = await import("../lib/email-event-rules.js");
+	const { normalizeSesEvent } = await import("../lib/ses-event-mapping.js");
+	const { normalizeResendEvent } = await import("../lib/email-provider/resend-events.js");
+	const { normalizePostshibaEvent } = await import("../lib/email-provider/postshiba-events.js");
+	const recorded = [
+		normalizeSesEvent({ eventType: "DeliveryDelay", mail: { messageId: "ses-1", destination: ["reader@example.com"] }, deliveryDelay: {} }),
+		normalizeResendEvent({ type: "email.delivery_delayed", created_at: "2026-11-18T10:00:00Z", data: { email_id: "re-1", to: ["reader@example.com"] } }),
+		normalizePostshibaEvent({ event: "deferred", email: "reader@example.com", sg_message_id: "ps-1" }),
+	].map((event) => getEventPlan(event));
+	for (const plan of recorded) assert.ok(plan.isRecorded, `${plan.type} is stored`);
+	assert.deepEqual(recorded.map(({ type }) => type).sort(), [...DELAYED_EVENT_TYPES].sort());
+});
+
+test("each inbox's row gets its delayed emails, none when it had no delays", async () => {
+	const { withDelays } = await import("../lib/report-stats.js");
+	const rows = withDelays(
+		[
+			{ provider: "gmail", sent: 600 },
+			{ provider: "outlook", sent: 400 },
+		],
+		new Map([["gmail", 42]])
+	);
+	assert.deepEqual(rows, [
+		{ provider: "gmail", sent: 600, delayed: 42 },
+		{ provider: "outlook", sent: 400, delayed: 0 },
+	]);
+});

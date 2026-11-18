@@ -332,9 +332,10 @@ function CardOpens({ timeline, timeZone, style }) {
 	);
 }
 
-// Results by inbox provider, each with its share of the send.
+// Results by inbox provider, each with its share of the send. Delayed shows once an inbox held some back.
 function TableProviders({ providers, style }) {
 	const total = providers.reduce((sum, { sent }) => sum + sent, 0);
+	const hasDelays = providers.some(({ delayed }) => delayed > 0);
 
 	return (
 		<div style={style} className="overflow-hidden rounded-xl shadow-border animate-enter">
@@ -346,6 +347,7 @@ function TableProviders({ providers, style }) {
 						<TableHead className="text-right">Delivered</TableHead>
 						<TableHead className="text-right max-sm:pr-4">Opened</TableHead>
 						<TableHead className="hidden text-right sm:table-cell">Clicked</TableHead>
+						{hasDelays && <TableHead className="hidden text-right sm:table-cell">Delayed</TableHead>}
 						<TableHead className="hidden text-right sm:table-cell">Bounced</TableHead>
 						<TableHead className="hidden pr-4 text-right sm:table-cell">Complaints</TableHead>
 					</TableRow>
@@ -377,6 +379,9 @@ function TableProviders({ providers, style }) {
 							<TableCell className="text-right">{formatRate(row.delivered, row.sent) ?? <TextEmpty />}</TableCell>
 							<TableCell className="text-right max-sm:pr-4">{formatRate(row.opened, row.delivered) ?? <TextEmpty />}</TableCell>
 							<TableCell className="hidden text-right sm:table-cell">{formatRate(row.clicked, row.delivered) ?? <TextEmpty />}</TableCell>
+							{hasDelays && (
+								<TableCell className="hidden text-right sm:table-cell">{formatQuietRate(row.delayed, row.sent, 1) ?? <TextEmpty />}</TableCell>
+							)}
 							<TableCell className="hidden text-right sm:table-cell">{formatQuietRate(row.bounced, row.sent, 2) ?? <TextEmpty />}</TableCell>
 							<TableCell className="hidden pr-4 text-right sm:table-cell">
 								{formatQuietRate(row.complained, row.sent, 3) ?? <TextEmpty />}
