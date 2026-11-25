@@ -21,12 +21,14 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/github/license/marclou/mailcheap?color=blue"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/github/license/garyvanhorn/mailcheap?color=blue"></a>
   <a href="#self-hosting"><img alt="Node.js 22 or later" src="https://img.shields.io/badge/node-22%2B-339933?logo=nodedotjs&logoColor=white"></a>
   <a href="https://mailcheap.ai/docs/mcp"><img alt="MCP server" src="https://img.shields.io/badge/MCP-server-0a0a0a"></a>
 </p>
 
 ![MailCheap's overview: emails sent, delivery, open, click, bounce and complaint rates, and subscribers over the last 30 days](docs/screenshots/overview.webp)
+
+This repository is the fork of [MailCheap](https://github.com/marclou/mailcheap) that runs mailto:bot. It sends through Resend, and its changes are in its pull requests; MailCheap's own news and releases are upstream.
 
 MailCheap is a newsletter app: write an issue, send it to your list, publish it on the web, from the dashboard or from your AI agent. This repository is the whole app. Self-host it with your own Amazon SES, Resend or PostShiba account, or use [MailCheap Cloud](https://mailcheap.ai), which runs this same code.
 
@@ -72,7 +74,7 @@ With your own sending account, you pay your provider for the emails you send: 10
 
 ## Self-hosting
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap&project-name=mailcheap&repository-name=mailcheap&env=MONGODB_URI,BETTER_AUTH_SECRET,SUPPRESSION_HASH_KEY,ADMIN_EMAILS,EMAIL_FROM&envDescription=Database%2C%20a%20signing%20secret%20and%20a%20hash%20key%20%2832%2B%20characters%20each%3A%20openssl%20rand%20-base64%2048%29%2C%20your%20email%20to%20sign%20in%20with%2C%20and%20the%20from%20address%20of%20sign-in%20codes.%20Add%20RESEND_API_KEY%2C%20or%20set%20up%20SES%20or%20PostShiba%2C%20so%20the%20codes%20can%20reach%20you.&envLink=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap%23environment-variables)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgaryvanhorn%2Fmailcheap&project-name=mailcheap&repository-name=mailcheap&env=MONGODB_URI,BETTER_AUTH_SECRET,SUPPRESSION_HASH_KEY,ADMIN_EMAILS,EMAIL_FROM&envDescription=Database%2C%20a%20signing%20secret%20and%20a%20hash%20key%20%2832%2B%20characters%20each%3A%20openssl%20rand%20-base64%2048%29%2C%20your%20email%20to%20sign%20in%20with%2C%20and%20the%20from%20address%20of%20sign-in%20codes.%20Add%20RESEND_API_KEY%2C%20or%20set%20up%20SES%20or%20PostShiba%2C%20so%20the%20codes%20can%20reach%20you.&envLink=https%3A%2F%2Fgithub.com%2Fgaryvanhorn%2Fmailcheap%23environment-variables)
 
 Plan for about an hour, most of it waiting for DNS and for your provider to approve production sending. Self-hosting comes without support: issues are off and setup questions go unanswered.
 
@@ -335,7 +337,7 @@ Read [AGENTS.md](AGENTS.md) first, whether you're a person or an AI agent: how t
 You need Node.js 22+ and MongoDB:
 
 ```bash
-git clone https://github.com/marclou/mailcheap.git && cd mailcheap
+git clone https://github.com/garyvanhorn/mailcheap.git && cd mailcheap
 npm install
 cp .env.example .env.local   # set MONGODB_URI, BETTER_AUTH_SECRET, SUPPRESSION_HASH_KEY, ADMIN_EMAILS
 npm run dev
@@ -361,6 +363,6 @@ Integration tests start a throwaway `mongod` per file, so `mongod` has to be on 
 
 [GNU Affero General Public License v3.0](LICENSE). Copyright (C) 2026 Marc Lou.
 
-If you change MailCheap and run it for other people, the AGPL asks you to offer them the source of your version: point the "Source code" link (`SOURCE_URL` in `lib/site.js`) at it. The one-time release before this license, [67d13b0](https://github.com/marclou/mailcheap/tree/67d13b028a6ecae9ec56d49c4b2db58019217eba) in github.com/marclou/mailcheap's history, stays under MIT.
+If you change MailCheap and run it for other people, the AGPL asks you to offer them the source of your version: point the "Source code" link at it with `NEXT_PUBLIC_SOURCE_URL` (`SOURCE_URL` in `lib/site.js`, which defaults to this fork). The one-time release before this license, [67d13b0](https://github.com/marclou/mailcheap/tree/67d13b028a6ecae9ec56d49c4b2db58019217eba) in github.com/marclou/mailcheap's history, stays under MIT.
 
 Made by [Marc Lou](https://x.com/marclou).

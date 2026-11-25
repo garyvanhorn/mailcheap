@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Report it privately on GitHub: open the [Security tab](https://github.com/marclou/mailcheap/security) and click Report a vulnerability. Please don't open a public issue for a security report.
+Report it privately on GitHub: open this fork's [Security tab](https://github.com/garyvanhorn/mailcheap/security) and click Report a vulnerability. Please don't open a public issue for a security report. A flaw in MailCheap's own code, not this fork's changes, can also go to [MailCheap's Security tab](https://github.com/marclou/mailcheap/security).
 
 ## Accounts and data
 
