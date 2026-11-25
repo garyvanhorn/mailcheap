@@ -36,6 +36,8 @@ test("without branding the server is MailCheap", async () => {
 	const config = await import("../lib/config.js");
 	if (!process.env.NEXT_PUBLIC_APP_NAME) assert.equal(config.APP_NAME, "MailCheap");
 	assert.equal(config.UPSTREAM_NAME, "MailCheap");
+	const site = await import("../lib/site.js");
+	if (!process.env.NEXT_PUBLIC_SOURCE_URL) assert.equal(site.SOURCE_URL, "https://github.com/garyvanhorn/mailcheap", "the source link offers this fork's code, the code it runs");
 });
 
 test("Redis settings come from Upstash's names or Vercel's KV_ names", async () => {
